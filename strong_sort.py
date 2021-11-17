@@ -1,4 +1,3 @@
-# vim: expandtab:ts=4:sw=4
 from __future__ import division, print_function, absolute_import
 
 import os
@@ -124,17 +123,19 @@ def create_detections(detection_mat, frame_idx, min_height=0):
     return detection_list
 
 
-def run(sequence_dir, detection_file, output_file, min_confidence,
+def run(tracking_filter, sequence_dir, detection_file, output_file, min_confidence,
         nms_max_overlap, min_detection_height, max_cosine_distance,
         nn_budget, display):
     """Run multi-target tracker on a particular sequence.
 
     Parameters
     ----------
+    tracking_filter : str
+        The filter of tracker(Kalman or SEKF).
     sequence_dir : str
         Path to the MOTChallenge sequence directory.
     detection_file : str
-        Path to the detections file.
+        Path to the detections file(.npy).
     output_file : str
         Path to the tracking output file. This file will contain the tracking
         results on completion.
@@ -158,7 +159,7 @@ def run(sequence_dir, detection_file, output_file, min_confidence,
     seq_info = gather_sequence_info(sequence_dir, detection_file)
     metric = nn_matching.NearestNeighborDistanceMetric(
         "cosine", max_cosine_distance, nn_budget)
-    tracker = Tracker(metric, tracker="SEKF")
+    tracker = Tracker(metric, tracker=tracking_filter)
     results = []
 
     def frame_callback(vis, frame_idx):
