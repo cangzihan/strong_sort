@@ -127,24 +127,27 @@ class Track:
         self.age += 1
         self.time_since_update += 1
 
-    def update(self, kf, detection):
+    def update(self, tracking_filter, detection):
         """Perform Kalman filter measurement update step and update the feature
         cache.
 
         Parameters
         ----------
-        kf : kalman_filter.KalmanFilter
-            The Kalman filter.
+        tracking_filter :
+            Kalman filter or SEKF.
         detection : Detection
             The associated detection.
 
         """
-        """
-        self.mean, self.covariance = kf.update(
-            self.mean_before, self.covariance_before, detection.to_xyah())
-        """
-        self.mean, self.covariance = kf.update(
-            self.mean_before, self.covariance_before, detection.to_xyah())
+        if "StrongEKF" in str(type(tracking_filter)):
+            self.mean, self.covariance = tracking_filter.update(
+                self.mean_before, self.covariance_before, detection.to_xyah())
+        elif "KalmanFilter" in str(type(tracking_filter)):
+            self.mean, self.covariance = tracking_filter.update(
+                self.mean, self.covariance, detection.to_xyah())
+        else:
+          raise Exception("Unknow Tracker")
+
         self.features.append(detection.feature)
 
         self.hits += 1
