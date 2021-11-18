@@ -15,10 +15,12 @@ class StrongEKF(KalmanFilter):
         self.fading_factor = 1
         self.V = None
         self.forgetting_factor = 0.9
-        self.weakening_factor = 9
+        self.weakening_factor = 20
+
+        self.cal_mode = "default"
 
     def __cal_fading_factor(self, mean, covariance, z):
-      # Calculate M
+        # Calculate M
         M = np.linalg.multi_dot((self.A, covariance, self.A.transpose()))
         M = np.linalg.multi_dot((self.H, M, self.H.transpose()))
 
@@ -43,7 +45,7 @@ class StrongEKF(KalmanFilter):
             self._std_weight_position * mean[3]]
         self.R = np.diag(np.square(std))
 
-      # Calculate N
+        # Calculate N
         err = z - np.dot(self._update_mat, mean)
         if self.V is None:
             self.V = np.dot(err, err.transpose())
@@ -51,13 +53,13 @@ class StrongEKF(KalmanFilter):
             self.V = (self.forgetting_factor * self.V + np.dot(err, err.transpose())) / (1 + self.forgetting_factor)
 
         N = self.V - np.linalg.multi_dot((self.H, self.Q, self.H.transpose())) - self.weakening_factor * self.R
-        
-      # Calculate fading factor
+
+        # Calculate fading factor
         fading_factor0 = np.trace(N) / np.trace(M)
         self.fading_factor = max(1, fading_factor0)
         self.fading_factor = min(self.forgetting_factor_max, self.fading_factor)
         if False:
-          print("Fading factor:", self.fading_factor)
+            print("Fading factor:", self.fading_factor)
         return self.fading_factor
 
     def update(self, mean, covariance, measurement):
@@ -95,20 +97,30 @@ class StrongEKF(KalmanFilter):
         mean_pre = np.dot(self._motion_mat, mean)
         self.__cal_fading_factor(mean_pre, covariance, measurement)
         covariance_stf = self.fading_factor * np.linalg.multi_dot((
-          self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
+            self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
 
-        projected_mean, projected_cov = self.project(mean_pre, covariance_stf)
+        if self.cal_mode == "fast":
+            projected_mean, projected_cov = self.project(mean_pre, covariance_stf)
 
-        chol_factor, lower = scipy.linalg.cho_factor(
-            projected_cov, lower=True, check_finite=False)
-        kalman_gain = scipy.linalg.cho_solve(
-            (chol_factor, lower), np.dot(covariance_stf, self._update_mat.T).T,
-            check_finite=False).T
-        innovation = measurement - projected_mean
+            chol_factor, lower = scipy.linalg.cho_factor(
+                projected_cov, lower=True, check_finite=False)
+            kalman_gain = scipy.linalg.cho_solve(
+                (chol_factor, lower), np.dot(covariance_stf, self._update_mat.T).T,
+                check_finite=False).T
+            innovation = measurement - projected_mean
 
-        new_mean = mean_pre + np.dot(innovation, kalman_gain.T)
-        new_covariance = covariance_stf - np.linalg.multi_dot((
-            kalman_gain, projected_cov, kalman_gain.T))
+            new_mean = mean_pre + np.dot(innovation, kalman_gain.T)
+            new_covariance = covariance_stf - np.linalg.multi_dot((
+                kalman_gain, projected_cov, kalman_gain.T))
+        else:
+            # Correct
+            k1 = np.dot(covariance_stf, self.H.transpose())
+            k2 = np.dot(self.H, k1) + self.R
+            K = np.dot(k1, np.linalg.inv(k2))
+
+            new_mean = mean_pre + np.dot(K, measurement - np.dot(self.H, mean_pre))
+            new_covariance = np.dot(np.identity(covariance.shape[0]) - np.dot(K, self.H), covariance_stf)
+
         return new_mean, new_covariance
 
 
@@ -142,16 +154,17 @@ if __name__ == "__main__":
     x_samples = []
     my_filter = StrongEKF(initial_position=[t[0], x[0]])
     import time
+
     t0 = time.time()
     for i in range(len(t)):
         a, b = my_filter.run([t[i], x[i]])
         x_samples.append([t[i], x[i]])
         x_pre_list.append(a)
         x_cor_list.append(b)
-        #my_filter.predict()
+        # my_filter.predict()
     for i in range(10):
         pass
-        #my_filter.run(my_filter.x_cor_list[-1])
+        # my_filter.run(my_filter.x_cor_list[-1])
     t = time.time() - t0
     print(t)
     show(x_samples, x_pre_list, x_cor_list, show_posteriori=False)

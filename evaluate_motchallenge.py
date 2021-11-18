@@ -49,6 +49,9 @@ if __name__ == "__main__":
 
     os.makedirs(args.output_dir, exist_ok=True)
     sequences = os.listdir(args.mot_dir)
+
+    import time
+    t0 = time.time()
     # Loop all the MOT sequence
     for sequence in sequences:
         print("Running sequence %s" % sequence)
@@ -73,6 +76,9 @@ if __name__ == "__main__":
 
         # Calculate acc
         acc.append(mm.utils.compare_to_groundtruth(gt, ts, 'iou', distth=0.5))
+
+    t = time.time() - t0
+    print("Time:", t)
 
     mh = mm.metrics.create()
     summary = mh.compute_many(acc, metrics=metrics, names=names, generate_overall=True)
