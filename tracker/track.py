@@ -111,7 +111,7 @@ class Track:
         ret[2:] = ret[:2] + ret[2:]
         return ret
 
-    def predict(self, kf):
+    def predict(self, tracking_filter):
         """Propagate the state distribution to the current time step using a
         Kalman filter prediction step.
 
@@ -121,11 +121,19 @@ class Track:
             The Kalman filter.
 
         """
-        self.mean_before = self.mean
-        self.covariance_before = self.covariance
-        self.mean, self.covariance = kf.predict(self.mean, self.covariance)
-        self.age += 1
-        self.time_since_update += 1
+        if "RNN" in str(type(tracking_filter)):
+          self.mean_before = self.mean
+          self.covariance_before = self.covariance
+          self.mean = tracking_filter.predict(self.mean)
+          self.age += 1
+          self.time_since_update += 1
+        else:
+          self.mean_before = self.mean
+          self.covariance_before = self.covariance
+          self.mean, self.covariance = tracking_filter.predict(self.mean, self.covariance)
+          self.age += 1
+          self.time_since_update += 1
+        
 
     def update(self, tracking_filter, detection):
         """Perform Kalman filter measurement update step and update the feature
@@ -145,6 +153,9 @@ class Track:
         elif "KalmanFilter" in str(type(tracking_filter)):
             self.mean, self.covariance = tracking_filter.update(
                 self.mean, self.covariance, detection.to_xyah())
+        elif "RNN" in str(type(tracking_filter)):
+            self.mean = tracking_filter.update(
+                self.mean_before, detection.to_xyah())
         else:
           raise Exception("Unknow Tracker")
 

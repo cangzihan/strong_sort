@@ -3,11 +3,15 @@ from __future__ import absolute_import
 import numpy as np
 from . import kalman_filter
 from . import STF
+from . import rnn
 from . import linear_assignment
 from . import iou_matching
 from .track import Track
 
 
+rnn_model_path = "/content/rnn2t_mot16"
+lstm_model_path = "/content/lstm2t_mot16"
+gru_model_path = "/content/gru2t_mot16"
 class Tracker:
     """
     This is the multi-target tracker.
@@ -38,16 +42,23 @@ class Tracker:
 
     """
 
-    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, tracker="Kalman"):
+    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, tracker="Kalman", img_size='1080p'):
         self.metric = metric
         self.max_iou_distance = max_iou_distance
         self.max_age = max_age
         self.n_init = n_init
+        self.tracker_type = tracker
 
         if tracker == "Kalman":
           self.kf = kalman_filter.KalmanFilter()
         elif tracker == "SEKF":
           self.kf = STF.StrongEKF()
+        elif tracker == "RNN":
+          self.kf = rnn.RNN(img_size=img_size, model_path=rnn_model_path)
+        elif tracker == "LSTM":
+          self.kf = rnn.RNN(img_size=img_size, model_path=lstm_model_path)
+        elif tracker == "GRU":
+          self.kf = rnn.RNN(img_size=img_size, model_path=gru_model_path)
         else:
           raise Exception("Unknow Tracker")
         self.tracks = []
@@ -137,8 +148,18 @@ class Tracker:
         return matches, unmatched_tracks, unmatched_detections
 
     def _initiate_track(self, detection):
-        mean, covariance = self.kf.initiate(detection.to_xyah())
-        self.tracks.append(Track(
-            mean, covariance, self._next_id, self.n_init, self.max_age,
-            detection.feature))
-        self._next_id += 1
+        if self.tracker_type == "Kalman" or self.tracker_type == "SEKF":
+          mean, covariance = self.kf.initiate(detection.to_xyah())
+          self.tracks.append(Track(
+              mean, covariance, self._next_id, self.n_init, self.max_age,
+              detection.feature))
+          self._next_id += 1
+        elif self.tracker_type in ["RNN", "GRU", "LSTM"]:
+          mean = self.kf.initiate(detection.to_xyah())
+          self.tracks.append(Track(
+              mean, None, self._next_id, self.n_init, self.max_age,
+              detection.feature))
+          self._next_id += 1
+        else:
+          raise Exception("Unknow Tracker")
+        

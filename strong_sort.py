@@ -159,7 +159,10 @@ def run(tracking_filter, sequence_dir, detection_file, output_file, min_confiden
     seq_info = gather_sequence_info(sequence_dir, detection_file)
     metric = nn_matching.NearestNeighborDistanceMetric(
         "cosine", max_cosine_distance, nn_budget)
-    tracker = Tracker(metric, tracker=tracking_filter)
+    if "MOT16-05" in sequence_dir:
+      tracker = Tracker(metric, tracker=tracking_filter, img_size='VGA')
+    else:
+      tracker = Tracker(metric, tracker=tracking_filter, img_size='1080p')
     results = []
 
     def frame_callback(vis, frame_idx):
