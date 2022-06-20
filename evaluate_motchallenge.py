@@ -41,9 +41,6 @@ def parse_args():
         "--rnn_model", help="Path of saved RNN model. This item is required "
                             "if the tracking_filter is RNN, LSTM or GRU", default=None)
     parser.add_argument(
-        "--nn_budget", help="Maximum size of the appearance descriptors "
-                            "gallery. If None, no budget is enforced.", type=int, default=100)
-    parser.add_argument(
         "--lamda_max", help="STF Lamda Max.", type=int, default=1.5)
     parser.add_argument(
         "--weakening_factor", help="STF Beta.", type=int, default=10)
