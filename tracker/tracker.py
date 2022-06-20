@@ -8,10 +8,6 @@ from . import linear_assignment
 from . import iou_matching
 from .track import Track
 
-
-rnn_model_path = "/content/rnn2t_mot16"
-lstm_model_path = "/content/lstm2t_mot16"
-gru_model_path = "/content/gru2t_mot16"
 class Tracker:
     """
     This is the multi-target tracker.
@@ -42,7 +38,7 @@ class Tracker:
 
     """
 
-    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, tracker="Kalman", img_size='1080p'):
+    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, tracker="Kalman", img_size='1080p', parameter=None):
         self.metric = metric
         self.max_iou_distance = max_iou_distance
         self.max_age = max_age
@@ -52,13 +48,13 @@ class Tracker:
         if tracker == "Kalman":
           self.kf = kalman_filter.KalmanFilter()
         elif tracker == "SEKF":
-          self.kf = STF.StrongEKF()
+          self.kf = STF.StrongEKF(lamda_max=parameter[1], weakening_factor=parameter[2])
         elif tracker == "RNN":
-          self.kf = rnn.RNN(img_size=img_size, model_path=rnn_model_path)
+          self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
         elif tracker == "LSTM":
-          self.kf = rnn.RNN(img_size=img_size, model_path=lstm_model_path)
+          self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
         elif tracker == "GRU":
-          self.kf = rnn.RNN(img_size=img_size, model_path=gru_model_path)
+          self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
         else:
           raise Exception("Unknow Tracker")
         self.tracks = []

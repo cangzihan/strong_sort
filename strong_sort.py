@@ -125,13 +125,13 @@ def create_detections(detection_mat, frame_idx, min_height=0):
 
 def run(tracking_filter, sequence_dir, detection_file, output_file, min_confidence,
         nms_max_overlap, min_detection_height, max_cosine_distance,
-        nn_budget, display):
+        nn_budget, display, rnn_model, lamda_max, weakening_factor):
     """Run multi-target tracker on a particular sequence.
 
     Parameters
     ----------
     tracking_filter : str
-        The filter of tracker(Kalman or SEKF).
+        The filter of tracker(Kalman, SEKF, RNN, LSTM or GRU).
     sequence_dir : str
         Path to the MOTChallenge sequence directory.
     detection_file : str
@@ -154,15 +154,20 @@ def run(tracking_filter, sequence_dir, detection_file, output_file, min_confiden
         is enforced.
     display : bool
         If True, show visualization of intermediate tracking results.
-
+    rnn_model : Path of saved RNN model. 
+        This item is required  if the tracking_filter is RNN, LSTM or GRU
+    lamda_max : STF Lamda Max.
+    weakening_factor : STF Beta.
     """
     seq_info = gather_sequence_info(sequence_dir, detection_file)
     metric = nn_matching.NearestNeighborDistanceMetric(
         "cosine", max_cosine_distance, nn_budget)
     if "MOT16-05" in sequence_dir:
-      tracker = Tracker(metric, tracker=tracking_filter, img_size='VGA')
+      tracker = Tracker(metric, tracker=tracking_filter, img_size='VGA',
+                        parameter=[rnn_model, lamda_max, weakening_factor])
     else:
-      tracker = Tracker(metric, tracker=tracking_filter, img_size='1080p')
+      tracker = Tracker(metric, tracker=tracking_filter, img_size='1080p',
+                        parameter=[rnn_model, lamda_max, weakening_factor])
     results = []
 
     def frame_callback(vis, frame_idx):

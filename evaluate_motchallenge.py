@@ -9,8 +9,8 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description="MOTChallenge evaluation")
     parser.add_argument(
-        "--tracking_filter", help="The filter of tracker(Kalman or SEKF)",
-        default="SEKF", type=str)
+        "--tracking_filter", help="The filter of tracker(Kalman, SEKF, RNN, LSTM or GRU)",
+        default="Kalman", type=str)
     parser.add_argument(
         "--mot_dir", help="Store sequences of MOT dataset(MOT16-2, MOT16-9, .....)",
         required=True)
@@ -37,6 +37,16 @@ def parse_args():
     parser.add_argument(
         "--nn_budget", help="Maximum size of the appearance descriptors "
                             "gallery. If None, no budget is enforced.", type=int, default=100)
+    parser.add_argument(
+        "--rnn_model", help="Path of saved RNN model. This item is required "
+                            "if the tracking_filter is RNN, LSTM or GRU", default=None)
+    parser.add_argument(
+        "--nn_budget", help="Maximum size of the appearance descriptors "
+                            "gallery. If None, no budget is enforced.", type=int, default=100)
+    parser.add_argument(
+        "--lamda_max", help="STF Lamda Max.", type=int, default=1.5)
+    parser.add_argument(
+        "--weakening_factor", help="STF Beta.", type=int, default=10)
     return parser.parse_args()
 
 
@@ -61,7 +71,9 @@ if __name__ == "__main__":
         strong_sort.run(
             args.tracking_filter, sequence_dir, detection_file, output_file, args.min_confidence,
             args.nms_max_overlap, args.min_detection_height,
-            args.max_cosine_distance, args.nn_budget, display=False)
+            args.max_cosine_distance, args.nn_budget, display=False,
+            rnn_model=args.rnn_model, lamda_max=args.lamda_max,
+            weakening_factor=args.weakening_factor)
 
         # load gt and ts files
         gt_file = os.path.join(args.mot_dir, "%s/gt/gt.txt" % sequence)

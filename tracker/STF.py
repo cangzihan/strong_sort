@@ -5,17 +5,17 @@ from .kalman_filter import KalmanFilter
 
 
 class StrongEKF(KalmanFilter):
-    def __init__(self):
+    def __init__(self, lamda_max=1.5, weakening_factor=10):
         super().__init__()
-        self.forgetting_factor_max = 1.5
+        self.fadding_factor_max = lamda_max
         # Rename
         self.A = self._motion_mat
         self.H = self._update_mat
 
         self.fading_factor = 1
         self.V = None
-        self.forgetting_factor = 0.9
-        self.weakening_factor = 20
+        self.forgetting_factor = 0.95
+        self.weakening_factor = weakening_factor
 
         self.cal_mode = "default"
 
@@ -57,7 +57,7 @@ class StrongEKF(KalmanFilter):
         # Calculate fading factor
         fading_factor0 = np.trace(N) / np.trace(M)
         self.fading_factor = max(1, fading_factor0)
-        self.fading_factor = min(self.forgetting_factor_max, self.fading_factor)
+        self.fading_factor = min(self.fadding_factor_max, self.fading_factor)
         if False:
             print("Fading factor:", self.fading_factor)
         return self.fading_factor
