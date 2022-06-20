@@ -51,10 +51,13 @@ class Tracker:
           self.kf = STF.StrongEKF(lamda_max=parameter[1], weakening_factor=parameter[2])
         elif tracker == "RNN":
           self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
+          print("Image Size:", self.kf.img_size)
         elif tracker == "LSTM":
           self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
+          print("Image Size:", self.kf.img_size)
         elif tracker == "GRU":
           self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
+          print("Image Size:", self.kf.img_size)
         else:
           raise Exception("Unknow Tracker")
         self.tracks = []

@@ -165,6 +165,24 @@ def run(tracking_filter, sequence_dir, detection_file, output_file, min_confiden
     if "MOT16-05" in sequence_dir:
       tracker = Tracker(metric, tracker=tracking_filter, img_size='VGA',
                         parameter=[rnn_model, lamda_max, weakening_factor])
+    elif "MOT20-03" in sequence_dir:
+      tracker = Tracker(metric, tracker=tracking_filter, img_size=(1173, 880),
+                        parameter=[rnn_model, lamda_max, weakening_factor])
+    elif "MOT20-05" in sequence_dir:
+      tracker = Tracker(metric, tracker=tracking_filter, img_size=(1654, 1080),
+                        parameter=[rnn_model, lamda_max, weakening_factor])
+    elif "MOT20-04" in sequence_dir:
+      tracker = Tracker(metric, tracker=tracking_filter, img_size=(1545, 1080),
+                        parameter=[rnn_model, lamda_max, weakening_factor])
+    elif "MOT20-06" in sequence_dir:
+      tracker = Tracker(metric, tracker=tracking_filter, img_size=(1920, 734),
+                        parameter=[rnn_model, lamda_max, weakening_factor])
+    elif "MOT20-08" in sequence_dir:
+      tracker = Tracker(metric, tracker=tracking_filter, img_size=(1920, 734),
+                        parameter=[rnn_model, lamda_max, weakening_factor])
+    elif "MOT16-06" in sequence_dir:
+      tracker = Tracker(metric, tracker=tracking_filter, img_size='VGA',
+                        parameter=[rnn_model, lamda_max, weakening_factor])
     else:
       tracker = Tracker(metric, tracker=tracking_filter, img_size='1080p',
                         parameter=[rnn_model, lamda_max, weakening_factor])

@@ -1,6 +1,4 @@
 import numpy as np
-import scipy
-import matplotlib.pylab as plt
 from .kalman_filter import KalmanFilter
 
 import tensorflow as tf
@@ -41,6 +39,17 @@ class RNN(KalmanFilter):
         elif self.img_size == 'VGA':
           x_pred = [[mean[0]/640,mean[1]/480,mean[2],mean[3]/480],
           [measurement[0]/640,measurement[1]/480,measurement[2],measurement[3]/480]]
+        elif type(self.img_size) is tuple:
+          x_pred = [[mean[0] / self.img_size[0],
+                     mean[1] / self.img_size[1],
+                     mean[2],
+                     mean[3] / self.img_size[1]],
+                    [measurement[0] / self.img_size[0],
+                     measurement[1] / self.img_size[1],
+                     measurement[2],
+                     measurement[3] / self.img_size[1]]]
+        else:
+            print("Unknow Image Size")
         
         # Predict
         rnn_pred = self.rnn_predict(x_pred)
@@ -54,6 +63,15 @@ class RNN(KalmanFilter):
           if rnn_pred[3] < 0:
             rnn_pred[3] = 0.001
           new_bbox = np.array([rnn_pred[0]*640,rnn_pred[1]*480,rnn_pred[2],rnn_pred[3]*480])
+        elif type(self.img_size) is tuple:
+          if rnn_pred[3] < 0:
+            rnn_pred[3] = 0.001
+          new_bbox = np.array([rnn_pred[0]*self.img_size[0],
+                               rnn_pred[1]*self.img_size[1],
+                               rnn_pred[2],
+                               rnn_pred[3]*self.img_size[1]])
+        else:
+            print("Unknow Image Size")
         #print("IIIU",mean)
         #print("OOOU",new_bbox)
         #new_bbox = mean
@@ -67,11 +85,16 @@ class RNN(KalmanFilter):
         x_pred = [[mean[0]/1920,mean[1]/1080,mean[2],mean[3]/1080]]
       elif self.img_size == 'VGA':
         x_pred = [[mean[0]/640,mean[1]/480,mean[2],mean[3]/480]]
-      
+      elif type(self.img_size) is tuple:
+        x_pred = [[mean[0] / self.img_size[0],
+                   mean[1] / self.img_size[1],
+                   mean[2],
+                   mean[3] / self.img_size[1]]]
+
       # Predict
       rnn_pred = self.rnn_predict(x_pred)
       
-      # Normalize
+      # Denormalization
       if self.img_size == '1080p':
         if rnn_pred[3] < 0:
           rnn_pred[3] = 0.001
@@ -80,6 +103,13 @@ class RNN(KalmanFilter):
         if rnn_pred[3] < 0:
           rnn_pred[3] = 0.001
         new_bbox = np.array([rnn_pred[0]*640,rnn_pred[1]*480,rnn_pred[2],rnn_pred[3]*480])
+      elif type(self.img_size) is tuple:
+        if rnn_pred[3] < 0:
+          rnn_pred[3] = 0.001
+        new_bbox = np.array([rnn_pred[0] * self.img_size[0],
+                   rnn_pred[1] * self.img_size[1],
+                   rnn_pred[2],
+                   rnn_pred[3] * self.img_size[1]])
       #print(new_bbox)
       return new_bbox
 
