@@ -8,6 +8,7 @@ from . import linear_assignment
 from . import iou_matching
 from .track import Track
 
+
 class Tracker:
     """
     This is the multi-target tracker.
@@ -38,28 +39,30 @@ class Tracker:
 
     """
 
-    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, tracker="Kalman", img_size='1080p', parameter=None):
+    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, tracker="Kalman", img_size='1080p',
+                 tracker_frame="DeepSORT", parameter=None):
         self.metric = metric
         self.max_iou_distance = max_iou_distance
         self.max_age = max_age
         self.n_init = n_init
         self.tracker_type = tracker
+        self.tracker_frame = tracker_frame
 
         if tracker == "Kalman":
-          self.kf = kalman_filter.KalmanFilter()
+            self.kf = kalman_filter.KalmanFilter()
         elif tracker == "SEKF":
-          self.kf = STF.StrongEKF(lamda_max=parameter[1], weakening_factor=parameter[2])
+            self.kf = STF.StrongEKF(lamda_max=parameter[1], weakening_factor=parameter[2])
         elif tracker == "RNN":
-          self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
-          print("Image Size:", self.kf.img_size)
+            self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
+            print("Image Size:", self.kf.img_size)
         elif tracker == "LSTM":
-          self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
-          print("Image Size:", self.kf.img_size)
+            self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
+            print("Image Size:", self.kf.img_size)
         elif tracker == "GRU":
-          self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
-          print("Image Size:", self.kf.img_size)
+            self.kf = rnn.RNN(img_size=img_size, model_path=parameter[0])
+            print("Image Size:", self.kf.img_size)
         else:
-          raise Exception("Unknow Tracker")
+            raise Exception("Unknow Tracker")
         self.tracks = []
         self._next_id = 1
 
@@ -95,10 +98,13 @@ class Tracker:
         self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
         # Update distance metric.
-        active_targets = [t.track_id for t in self.tracks if t.is_confirmed()]
+        if self.tracker_frame in ["POI"]:
+            active_targets = [t.track_id for t in self.tracks]
+        else:
+            active_targets = [t.track_id for t in self.tracks if t.is_confirmed()]
         features, targets = [], []
         for track in self.tracks:
-            if not track.is_confirmed():
+            if not track.is_confirmed() and self.tracker_frame in ["DeepSORT", "SORT"]:
                 continue
             features += track.features
             targets += [track.track_id for _ in track.features]
@@ -119,28 +125,39 @@ class Tracker:
             return cost_matrix
 
         # Split track set into confirmed and unconfirmed tracks.
-        confirmed_tracks = [
-            i for i, t in enumerate(self.tracks) if t.is_confirmed()]
-        unconfirmed_tracks = [
-            i for i, t in enumerate(self.tracks) if not t.is_confirmed()]
+        if self.tracker_frame in ["POI"]:
+            confirmed_tracks = [i for i, t in enumerate(self.tracks)]
+        else:
+            confirmed_tracks = [
+                i for i, t in enumerate(self.tracks) if t.is_confirmed()]
+            unconfirmed_tracks = [
+                i for i, t in enumerate(self.tracks) if not t.is_confirmed()]
 
-        # Associate confirmed tracks using appearance features.
-        matches_a, unmatched_tracks_a, unmatched_detections = \
-            linear_assignment.matching_cascade(
-                gated_metric, self.metric.matching_threshold, self.max_age,
-                self.tracks, detections, confirmed_tracks)
+        if self.tracker_frame in ["DeepSORT", "POI"]:
+            # Associate confirmed tracks using appearance features.
+            matches_a, unmatched_tracks_a, unmatched_detections = \
+                linear_assignment.matching_cascade(
+                    gated_metric, self.metric.matching_threshold, self.max_age,
+                    self.tracks, detections, confirmed_tracks)
+            return matches_a, unmatched_tracks_a, unmatched_detections
+        else:
+            matches_a = []
 
-        # Associate remaining tracks together with unconfirmed tracks using IOU.
-        iou_track_candidates = unconfirmed_tracks + [
-            k for k in unmatched_tracks_a if
-            self.tracks[k].time_since_update == 1]
-        unmatched_tracks_a = [
-            k for k in unmatched_tracks_a if
-            self.tracks[k].time_since_update != 1]
-        matches_b, unmatched_tracks_b, unmatched_detections = \
-            linear_assignment.min_cost_matching(
-                iou_matching.iou_cost, self.max_iou_distance, self.tracks,
-                detections, iou_track_candidates, unmatched_detections)
+        if self.tracker_frame in ["DeepSORT", "SORT"]:
+            # Associate remaining tracks together with unconfirmed tracks using IOU.
+            iou_track_candidates = unconfirmed_tracks + [
+                k for k in unmatched_tracks_a if
+                self.tracks[k].time_since_update == 1]
+            unmatched_tracks_a = [
+                k for k in unmatched_tracks_a if
+                self.tracks[k].time_since_update != 1]
+            matches_b, unmatched_tracks_b, unmatched_detections = \
+                linear_assignment.min_cost_matching(
+                    iou_matching.iou_cost, self.max_iou_distance, self.tracks,
+                    detections, iou_track_candidates, unmatched_detections)
+        else:
+            matches_b = []
+            unmatched_tracks_b = []
 
         matches = matches_a + matches_b
         unmatched_tracks = list(set(unmatched_tracks_a + unmatched_tracks_b))
@@ -148,17 +165,17 @@ class Tracker:
 
     def _initiate_track(self, detection):
         if self.tracker_type == "Kalman" or self.tracker_type == "SEKF":
-          mean, covariance = self.kf.initiate(detection.to_xyah())
-          self.tracks.append(Track(
-              mean, covariance, self._next_id, self.n_init, self.max_age,
-              detection.feature))
-          self._next_id += 1
+            mean, covariance = self.kf.initiate(detection.to_xyah())
+            self.tracks.append(Track(
+                mean, covariance, self._next_id, self.n_init, self.max_age,
+                detection.feature))
+            self._next_id += 1
         elif self.tracker_type in ["RNN", "GRU", "LSTM"]:
-          mean = self.kf.initiate(detection.to_xyah())
-          self.tracks.append(Track(
-              mean, None, self._next_id, self.n_init, self.max_age,
-              detection.feature))
-          self._next_id += 1
+            mean = self.kf.initiate(detection.to_xyah())
+            self.tracks.append(Track(
+                mean, None, self._next_id, self.n_init, self.max_age,
+                detection.feature))
+            self._next_id += 1
         else:
-          raise Exception("Unknow Tracker")
-        
+            raise Exception("Unknow Tracker")
+

@@ -12,6 +12,9 @@ def parse_args():
         "--tracking_filter", help="The filter of tracker(Kalman, SEKF, RNN, LSTM or GRU)",
         default="Kalman", type=str)
     parser.add_argument(
+        "--tracker_frame", help="The framework of tracker(DeepSORT, SORT, POI)",
+        default="DeepSORT", type=str)
+    parser.add_argument(
         "--mot_dir", help="Store sequences of MOT dataset(MOT16-2, MOT16-9, .....)",
         required=True)
     parser.add_argument(
@@ -41,9 +44,9 @@ def parse_args():
         "--rnn_model", help="Path of saved RNN model. This item is required "
                             "if the tracking_filter is RNN, LSTM or GRU", default=None)
     parser.add_argument(
-        "--lamda_max", help="STF Lamda Max.", type=int, default=1.5)
+        "--lamda_max", help="STF Lamda Max.", type=float, default=1.5)
     parser.add_argument(
-        "--weakening_factor", help="STF Beta.", type=int, default=10)
+        "--weakening_factor", help="STF Beta.", type=float, default=10)
     return parser.parse_args()
 
 
@@ -66,9 +69,9 @@ if __name__ == "__main__":
         detection_file = os.path.join(args.detection_dir, "%s.npy" % sequence)
         output_file = os.path.join(args.output_dir, "%s.txt" % sequence)
         strong_sort.run(
-            args.tracking_filter, sequence_dir, detection_file, output_file, args.min_confidence,
-            args.nms_max_overlap, args.min_detection_height,
-            args.max_cosine_distance, args.nn_budget, display=False,
+            args.tracking_filter, args.tracker_frame, sequence_dir, detection_file,
+            output_file, args.min_confidence, args.nms_max_overlap,
+            args.min_detection_height, args.max_cosine_distance, args.nn_budget, display=False,
             rnn_model=args.rnn_model, lamda_max=args.lamda_max,
             weakening_factor=args.weakening_factor)
 
