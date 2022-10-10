@@ -40,13 +40,14 @@ class Tracker:
     """
 
     def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, tracker="Kalman", img_size='1080p',
-                 tracker_frame="DeepSORT", parameter=None):
+                 tracker_frame="DeepSORT", parameter=None, add_noise=[25, 0.4]):
         self.metric = metric
         self.max_iou_distance = max_iou_distance
         self.max_age = max_age
         self.n_init = n_init
         self.tracker_type = tracker
         self.tracker_frame = tracker_frame
+        self.add_noise = add_noise
 
         if tracker == "Kalman":
             self.kf = kalman_filter.KalmanFilter()
@@ -90,7 +91,7 @@ class Tracker:
         # Update track set.
         for track_idx, detection_idx in matches:
             self.tracks[track_idx].update(
-                self.kf, detections[detection_idx])
+                self.kf, detections[detection_idx], self.add_noise)
         for track_idx in unmatched_tracks:
             self.tracks[track_idx].mark_missed()
         for detection_idx in unmatched_detections:

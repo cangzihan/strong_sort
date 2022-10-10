@@ -57,7 +57,10 @@ class StrongEKF(KalmanFilter):
         # Calculate fading factor
         fading_factor0 = np.trace(N) / np.trace(M)
         self.fading_factor = max(1, fading_factor0)
-        self.fading_factor = min(self.fadding_factor_max, self.fading_factor)
+        a = 2 * (self.fadding_factor_max - 1)
+        b = 2 - self.fadding_factor_max
+        self.fading_factor = 1 / (1 + np.exp(-self.fading_factor+1)) * a + b
+        #self.fading_factor = min(self.fadding_factor_max, self.fading_factor)
         if False:
             print("Fading factor:", self.fading_factor)
         return self.fading_factor

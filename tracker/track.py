@@ -1,5 +1,5 @@
 # vim: expandtab:ts=4:sw=4
-
+import random
 
 class TrackState:
     """
@@ -81,6 +81,7 @@ class Track:
 
         self._n_init = n_init
         self._max_age = max_age
+        random.seed(10000)
 
     def to_tlwh(self):
         """Get current position in bounding box format `(top left x, top left y,
@@ -135,7 +136,7 @@ class Track:
           self.time_since_update += 1
         
 
-    def update(self, tracking_filter, detection):
+    def update(self, tracking_filter, detection, add_noise=[25, 0.4]):
         """Perform Kalman filter measurement update step and update the feature
         cache.
 
@@ -147,10 +148,22 @@ class Track:
             The associated detection.
 
         """
+
         if "StrongEKF" in str(type(tracking_filter)):
+            self.mean_before[0] = round(random.choice((0, random.random() * 2 - 1)) * add_noise[0]) + self.mean_before[0]
+            self.mean_before[0] = max(0, self.mean_before[0])
+            self.mean_before[1] = round(random.choice((0, random.random() * 2 - 1)) * add_noise[0]) + self.mean_before[1]
+            self.mean_before[1] = max(0, self.mean_before[1])
+            self.mean_before[3] = round((random.choice((0, random.random() * add_noise[1]))) * self.mean_before[3]) + self.mean_before[3]
+
             self.mean, self.covariance = tracking_filter.update(
                 self.mean_before, self.covariance_before, detection.to_xyah())
         elif "KalmanFilter" in str(type(tracking_filter)):
+            self.mean[0] = round(random.choice((0, random.random() * 2 - 1)) * add_noise[0]) + self.mean[0]
+            self.mean[0] = max(0, self.mean[0])
+            self.mean[1] = round(random.choice((0, random.random() * 2 - 1)) * add_noise[0]) + self.mean[1]
+            self.mean[1] = max(0, self.mean[1])
+            self.mean[3] = round((random.choice((0, random.random() * add_noise[1]))) * self.mean_before[3]) + self.mean[3]
             self.mean, self.covariance = tracking_filter.update(
                 self.mean, self.covariance, detection.to_xyah())
         elif "RNN" in str(type(tracking_filter)):
